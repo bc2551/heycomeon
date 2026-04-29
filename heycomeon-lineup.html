@@ -321,6 +321,29 @@ select option{background:var(--navy2);}
 .ib-close{background:none;border:none;color:var(--gray);font-size:1rem;cursor:pointer;padding:4px;}
 
 /* ═══════════════════════════════════════
+   BENCH
+═══════════════════════════════════════ */
+.bench-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;}
+.bench-slot{background:rgba(255,255,255,.03);border:1.5px solid rgba(255,255,255,.07);
+  border-radius:10px;padding:9px 11px;display:flex;align-items:center;gap:8px;
+  cursor:pointer;transition:all .15s;}
+.bench-slot:hover,.bench-slot:active{border-color:rgba(232,200,74,.35);background:rgba(232,200,74,.04);}
+.bench-slot.active-bench{border-color:var(--accent);background:rgba(232,200,74,.07);}
+.bench-num{font-family:'Black Han Sans',sans-serif;font-size:.95rem;color:var(--accent);
+  width:28px;height:28px;border-radius:7px;background:rgba(26,58,110,.5);
+  border:1px solid rgba(232,200,74,.2);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.bench-info{flex:1;min-width:0;}
+.bench-name{font-weight:700;font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.bench-empty{color:var(--gray);font-size:.72rem;font-style:italic;}
+/* 카드 대기선수 */
+.bc-bench-section{padding:8px 14px;border-top:1px solid rgba(255,255,255,.07);background:rgba(0,0,0,.1);}
+.bc-bench-title{font-size:.6rem;color:var(--gray);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;}
+.bc-bench-list{display:flex;flex-wrap:wrap;gap:6px;}
+.bc-bench-item{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);
+  border-radius:8px;padding:4px 10px;font-size:.78rem;display:flex;gap:5px;align-items:center;}
+.bc-bench-item .bn{color:var(--accent);font-family:'Black Han Sans',sans-serif;font-size:.75rem;}
+
+/* ═══════════════════════════════════════
    SCROLLBAR
 ═══════════════════════════════════════ */
 ::-webkit-scrollbar{width:3px;}
@@ -405,6 +428,11 @@ select option{background:var(--navy2);}
     </div>
     <div class="slots-grid" id="lineupSlots"></div>
 
+    <div style="display:flex;justify-content:space-between;align-items:center;margin:14px 0 10px;">
+      <div class="sec-title" style="margin:0;flex:1">대기 선수</div>
+    </div>
+    <div class="bench-grid" id="benchSlots"></div>
+
     <div class="action-bar">
       <button class="btn btn-accent" onclick="saveLineup()">💾 라인업 저장</button>
       <button class="btn btn-ghost" onclick="showPage('card')">🖼 카드 보기</button>
@@ -488,9 +516,12 @@ select option{background:var(--navy2);}
 // ════════════════════════════════════
 let roster  = JSON.parse(localStorage.getItem('hcRoster')  || '[]');
 let lineup  = JSON.parse(localStorage.getItem('hcLineup')  || 'null') || Array(10).fill(null);
+let bench   = JSON.parse(localStorage.getItem('hcBench')   || 'null') || Array(6).fill(null);
 let history = JSON.parse(localStorage.getItem('hcHistory') || '[]');
 lineup = Array.from({length:10},(_,i)=>lineup[i]||null);
+bench  = Array.from({length:6}, (_,i)=>bench[i]||null);
 let activeSlot = null;
+let activeBench = null;
 let fmGameIdx  = null;
 let currentPage = 'roster';
 
@@ -502,6 +533,7 @@ const FIELD_XY  = {CF:{x:200,y:65},LF:{x:95,y:125},RF:{x:305,y:125},SS:{x:155,y:
 function saveState(){
   localStorage.setItem('hcRoster',  JSON.stringify(roster));
   localStorage.setItem('hcLineup',  JSON.stringify(lineup));
+  localStorage.setItem('hcBench',   JSON.stringify(bench));
   localStorage.setItem('hcHistory', JSON.stringify(history));
 }
 
@@ -516,7 +548,7 @@ function showPage(page, btn){
   if(navBtn) navBtn.classList.add('active');
   document.getElementById('mainScroll').scrollTop = 0;
   currentPage = page;
-  if(page==='lineup'){renderSlots();updateBroadcast();}
+  if(page==='lineup'){renderSlots();renderBench();updateBroadcast();}
   if(page==='card'){updateBroadcast();}
   if(page==='history'){renderHistory();}
 }
@@ -551,7 +583,8 @@ function removePlayer(name){
   if(!confirm(`${name} 선수를 삭제할까요?`))return;
   roster=roster.filter(p=>p.name!==name);
   lineup=lineup.map(s=>(s&&s.name===name)?null:s);
-  saveState(); renderRoster(); if(currentPage==='lineup')renderSlots();
+  bench=bench.map(s=>(s&&s.name===name)?null:s);
+  saveState(); renderRoster(); if(currentPage==='lineup'){renderSlots();renderBench();}
   showToast(`🗑 ${name} 삭제됨`);
 }
 function renderRoster(){
@@ -679,7 +712,9 @@ function closeSheet(){
   document.getElementById('sheetOverlay').classList.remove('open');
   document.getElementById('pickerSheet').classList.remove('open');
   activeSlot=null;
+  activeBench=null;
   renderSlots();
+  renderBench();
 }
 function assignPlayer(idx,name){
   const player=roster.find(p=>p.name===name);
@@ -702,9 +737,10 @@ function removeFromSlot(idx){
   showToast(`🗑 ${name} 제거됨`);
 }
 function clearLineup(){
-  if(!confirm('라인업을 초기화할까요?'))return;
+  if(!confirm('라인업과 대기선수를 모두 초기화할까요?'))return;
   lineup=Array(10).fill(null);
-  saveState(); renderSlots(); updateBroadcast();
+  bench=Array(6).fill(null);
+  saveState(); renderSlots(); renderBench(); updateBroadcast();
   showToast('🗑 라인업 초기화 완료');
 }
 
@@ -724,8 +760,12 @@ function getGameInfo(){
   }
   return {stadium,dateVal,dateStr,opponent,timeVal};
 }
-function buildCard(lup, gInfo){
-  const {stadium,dateStr,opponent,timeVal} = gInfo || getGameInfo();
+function buildCard(lup, benchOrGInfo, gInfo){
+  // 두번째 인자: 배열이면 bench데이터, 객체면 gInfo
+  let benchData, gameInfo;
+  if(Array.isArray(benchOrGInfo)){benchData=benchOrGInfo; gameInfo=gInfo;}
+  else{benchData=bench; gameInfo=benchOrGInfo;}
+  const {stadium,dateStr,opponent,timeVal} = gameInfo || getGameInfo();
   const metaParts=[dateStr,timeVal||null,stadium].filter(Boolean);
   const metaStr=metaParts.join(' / ');
 
@@ -799,11 +839,91 @@ function buildCard(lup, gInfo){
       ${batRows}${spRow}
     </div>
   </div>
+  ${benchData&&benchData.filter(Boolean).length?`
+  <div class="bc-bench-section">
+    <div class="bc-bench-title">🪑 대기 선수</div>
+    <div class="bc-bench-list">
+      ${benchData.filter(Boolean).map(b=>`
+        <div class="bc-bench-item"><span class="bn">#${b.num}</span>${b.name}</div>
+      `).join('')}
+    </div>
+  </div>`:''}
   <div class="bc-footer"><span>⚾ 헤이컴온 공식 라인업</span><span>${dateStr}</span></div>`;
 }
+
+// ════════════════════════════════════
+// BENCH
+// ════════════════════════════════════
+function renderBench(){
+  const c=document.getElementById('benchSlots');
+  if(!c)return;
+  c.innerHTML='';
+  for(let i=0;i<6;i++){
+    const p=bench[i];
+    const slot=document.createElement('div');
+    slot.className='bench-slot'+(activeBench===i?' active-bench':'');
+    slot.onclick=()=>openBenchSheet(i);
+    slot.innerHTML=p
+      ?`<div class="bench-num">${p.num}</div>
+        <div class="bench-info"><div class="bench-name">${p.name}</div></div>
+        <div style="font-size:.65rem;color:var(--gray)">›</div>`
+      :`<div class="bench-empty" style="width:100%;text-align:center;">대기 ${i+1}</div>`;
+    c.appendChild(slot);
+  }
+}
+function openBenchSheet(idx){
+  activeBench=idx;
+  const p=bench[idx];
+  // 라인업+벤치에서 이미 배치된 선수 제외
+  const usedNames=[
+    ...lineup.filter(Boolean).map(l=>l.name),
+    ...bench.filter((b,i)=>b&&i!==idx).map(b=>b.name)
+  ];
+  const available=roster.filter(r=>!usedNames.includes(r.name));
+  document.getElementById('sheetTitle').textContent=`대기선수 ${idx+1} 선택`;
+  let html='';
+  if(!available.length&&!p){
+    html=`<div class="no-players-msg">선택 가능한 선수가 없습니다</div>`;
+  } else {
+    if(available.length){
+      html+=`<div class="picker-section-hdr">선수 선택</div>`;
+      html+=available.map(r=>`
+        <div class="picker-player-item" onclick="assignBench(${idx},'${r.name}')">
+          <div class="ppi-num">${r.num}</div>
+          <div class="ppi-info">
+            <div class="ppi-name">${r.name}</div>
+            <div class="ppi-pos"><span style="color:${POS_COLOR[r.pos]||'#aaa'};font-weight:700">${r.pos}</span> ${POS_KR[r.pos]||''}</div>
+          </div>
+        </div>`).join('');
+    }
+    if(p){
+      html+=`<div class="remove-item" onclick="removeBench(${idx})">✕ &nbsp;${p.name} 제거</div>`;
+    }
+  }
+  document.getElementById('sheetBody').innerHTML=html;
+  document.getElementById('sheetOverlay').classList.add('open');
+  document.getElementById('pickerSheet').classList.add('open');
+  renderBench();
+}
+function assignBench(idx,name){
+  const player=roster.find(p=>p.name===name);
+  if(!player)return;
+  bench[idx]={name:player.name,pos:player.pos,num:player.num};
+  activeBench=null;
+  saveState(); closeSheet(); renderBench(); updateBroadcast();
+  showToast(`✅ ${player.name} 대기선수 등록`);
+}
+function removeBench(idx){
+  const name=bench[idx]?.name||'';
+  bench[idx]=null;
+  activeBench=null;
+  saveState(); closeSheet(); renderBench(); updateBroadcast();
+  showToast(`🗑 ${name} 제거됨`);
+}
+
 function updateBroadcast(){
   const card=document.getElementById('broadcastCard');
-  if(card) card.innerHTML=buildCard(lineup);
+  if(card) card.innerHTML=buildCard(lineup,bench);
 }
 
 // ════════════════════════════════════
@@ -815,7 +935,7 @@ function saveLineup(){
   if(lineup.filter(Boolean).length<9){
     if(!confirm('미배치 선수가 있습니다. 그래도 저장할까요?'))return;
   }
-  history.unshift({id:Date.now(),stadium,date:dateVal,time:timeVal,opponent,lineup:JSON.parse(JSON.stringify(lineup))});
+  history.unshift({id:Date.now(),stadium,date:dateVal,time:timeVal,opponent,lineup:JSON.parse(JSON.stringify(lineup)),bench:JSON.parse(JSON.stringify(bench))});
   saveState();
   showToast(`💾 "${opponent}" 경기 저장 완료!`);
 }
@@ -866,6 +986,7 @@ function deleteHistory(i){
 function loadHistoryToEditor(i){
   const g=history[i];
   lineup=JSON.parse(JSON.stringify(g.lineup));
+  bench=JSON.parse(JSON.stringify(g.bench||Array(6).fill(null)));
   document.getElementById('gStadium').value=g.stadium||'';
   document.getElementById('gDate').value=g.date||'';
   document.getElementById('gOpponent').value=g.opponent||'';
