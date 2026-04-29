@@ -256,6 +256,7 @@ select option{background:var(--navy2);}
 .bc-list-hdr{display:grid;grid-template-columns:32px 1fr 60px 36px;padding:6px 14px;font-size:.58rem;color:var(--gray);letter-spacing:1.5px;text-transform:uppercase;border-bottom:1px solid rgba(255,255,255,.06);background:rgba(232,200,74,.05);}
 .bc-row{display:grid;grid-template-columns:32px 1fr 60px 36px;padding:9px 14px;align-items:center;border-bottom:1px solid rgba(255,255,255,.04);}
 .bc-row.sp-row{background:rgba(231,76,60,.06);border-top:1px solid rgba(231,76,60,.18);}
+.bc-row.dh-bat-row{background:rgba(0,188,212,.04);}
 .bc-order{font-family:'Black Han Sans',sans-serif;font-size:.9rem;color:rgba(232,200,74,.55);}
 .bc-row.sp-row .bc-order{font-size:.58rem;color:rgba(231,76,60,.7);font-family:'Noto Sans KR',sans-serif;font-weight:700;letter-spacing:.5px;}
 .bc-name-cell{display:flex;flex-direction:column;}
@@ -363,7 +364,7 @@ select option{background:var(--navy2);}
           <select id="rPos">
             <option value="">선택</option>
             <option>P</option><option>C</option><option>1B</option><option>2B</option>
-            <option>3B</option><option>SS</option><option>LF</option><option>CF</option><option>RF</option>
+            <option>3B</option><option>SS</option><option>LF</option><option>CF</option><option>RF</option><option>DH</option>
           </select>
         </div>
         <div>
@@ -493,10 +494,10 @@ let activeSlot = null;
 let fmGameIdx  = null;
 let currentPage = 'roster';
 
-const ALL_POS   = ['P','C','1B','2B','3B','SS','LF','CF','RF'];
-const POS_KR    = {P:'투수',C:'포수','1B':'1루수','2B':'2루수','3B':'3루수',SS:'유격수',LF:'좌익수',CF:'중견수',RF:'우익수'};
-const POS_COLOR = {P:'#e74c3c',C:'#e67e22','1B':'#f1c40f','2B':'#2ecc71','3B':'#1abc9c',SS:'#3498db',LF:'#9b59b6',CF:'#e91e63',RF:'#ff5722'};
-const FIELD_XY  = {CF:{x:200,y:65},LF:{x:95,y:125},RF:{x:305,y:125},SS:{x:155,y:168},'2B':{x:245,y:168},'3B':{x:103,y:213},'1B':{x:297,y:213},P:{x:200,y:202},C:{x:200,y:275}};
+const ALL_POS   = ['P','C','1B','2B','3B','SS','LF','CF','RF','DH'];
+const POS_KR    = {P:'투수',C:'포수','1B':'1루수','2B':'2루수','3B':'3루수',SS:'유격수',LF:'좌익수',CF:'중견수',RF:'우익수',DH:'지명타자'};
+const POS_COLOR = {P:'#e74c3c',C:'#e67e22','1B':'#f1c40f','2B':'#2ecc71','3B':'#1abc9c',SS:'#3498db',LF:'#9b59b6',CF:'#e91e63',RF:'#ff5722',DH:'#00bcd4'};
+const FIELD_XY  = {CF:{x:200,y:65},LF:{x:95,y:125},RF:{x:305,y:125},SS:{x:155,y:168},'2B':{x:245,y:168},'3B':{x:103,y:213},'1B':{x:297,y:213},P:{x:200,y:202},C:{x:200,y:275},DH:{x:318,y:244}};
 
 function saveState(){
   localStorage.setItem('hcRoster',  JSON.stringify(roster));
@@ -618,7 +619,15 @@ function openSheet(slotIdx){
   const isPitcher=slotIdx===9;
   const p=lineup[slotIdx];
   const usedPos=getUsedPos(slotIdx);
-  const usedNames=lineup.filter((l,i)=>l&&i!==slotIdx).map(l=>l.name);
+  // SP(9)↔타순(0~8) 간에는 같은 선수 중복 허용 (투수타자 겸업)
+  const usedNames=lineup.filter((l,i)=>{
+    if(!l||i===slotIdx)return false;
+    // 타순 슬롯(0~8)에 배치할 때: SP(9) 선수는 중복 허용
+    if(slotIdx<=8 && i===9) return false;
+    // SP(9)에 배치할 때: 타순(0~8) 선수는 중복 허용
+    if(slotIdx===9 && i<=8) return false;
+    return true;
+  }).map(l=>l.name);
   const available=roster.filter(r=>!usedNames.includes(r.name));
 
   document.getElementById('sheetTitle').textContent=isPitcher?'선발 투수 선택':`${slotIdx+1}번 타자 선택`;
@@ -737,7 +746,8 @@ function buildCard(lup, gInfo){
 
   const batRows=lup.slice(0,9).map((p,i)=>{
     const pos=p?p.gamePos||p.pos:'';
-    return `<div class="bc-row">
+    const isDHrow=pos==='DH';
+    return `<div class="bc-row${isDHrow?' dh-bat-row':''}">
       <div class="bc-order">${i+1}</div>
       <div class="bc-name-cell">
         <span class="bc-pname">${p?p.name:`<span class="bc-empty-n">미배치</span>`}</span>
@@ -769,7 +779,7 @@ function buildCard(lup, gInfo){
   <div class="bc-main">
     <div class="bc-field-side">
       <div class="field-svg-wrap">
-        <svg viewBox="64 36 272 262" xmlns="http://www.w3.org/2000/svg">
+        <svg viewBox="60 36 290 262" xmlns="http://www.w3.org/2000/svg">
           <defs><radialGradient id="fg" cx="50%" cy="70%" r="60%"><stop offset="0%" stop-color="#2d5a1b"/><stop offset="100%" stop-color="#1a3a10"/></radialGradient></defs>
           <ellipse cx="200" cy="182" rx="135" ry="118" fill="url(#fg)" opacity=".55"/>
           <line x1="200" y1="275" x2="68" y2="52" stroke="rgba(255,255,255,.12)" stroke-width="1"/>
