@@ -528,7 +528,7 @@ let currentPage = 'roster';
 const ALL_POS   = ['P','C','1B','2B','3B','SS','LF','CF','RF','DH'];
 const POS_KR    = {P:'투수',C:'포수','1B':'1루수','2B':'2루수','3B':'3루수',SS:'유격수',LF:'좌익수',CF:'중견수',RF:'우익수',DH:'지명타자'};
 const POS_COLOR = {P:'#e74c3c',C:'#e67e22','1B':'#f1c40f','2B':'#2ecc71','3B':'#1abc9c',SS:'#3498db',LF:'#9b59b6',CF:'#e91e63',RF:'#ff5722',DH:'#00bcd4'};
-const FIELD_XY  = {CF:{x:200,y:65},LF:{x:95,y:125},RF:{x:305,y:125},SS:{x:155,y:168},'2B':{x:245,y:168},'3B':{x:103,y:213},'1B':{x:297,y:213},P:{x:200,y:202},C:{x:200,y:275},DH:{x:318,y:244}};
+const FIELD_XY  = {CF:{x:200,y:52},LF:{x:90,y:120},RF:{x:310,y:120},SS:{x:155,y:158},'2B':{x:245,y:158},'3B':{x:100,y:195},'1B':{x:300,y:195},P:{x:200,y:190},C:{x:200,y:272},DH:{x:322,y:233}};
 
 function saveState(){
   localStorage.setItem('hcRoster',  JSON.stringify(roster));
@@ -819,17 +819,39 @@ function buildCard(lup, benchOrGInfo, gInfo){
   <div class="bc-main">
     <div class="bc-field-side">
       <div class="field-svg-wrap">
-        <svg viewBox="60 36 290 262" xmlns="http://www.w3.org/2000/svg">
-          <defs><radialGradient id="fg" cx="50%" cy="70%" r="60%"><stop offset="0%" stop-color="#2d5a1b"/><stop offset="100%" stop-color="#1a3a10"/></radialGradient></defs>
-          <ellipse cx="200" cy="182" rx="135" ry="118" fill="url(#fg)" opacity=".55"/>
-          <line x1="200" y1="275" x2="68" y2="52" stroke="rgba(255,255,255,.12)" stroke-width="1"/>
-          <line x1="200" y1="275" x2="332" y2="52" stroke="rgba(255,255,255,.12)" stroke-width="1"/>
-          <polygon points="200,125 265,190 200,255 135,190" fill="rgba(180,140,80,.13)" stroke="rgba(255,255,255,.22)" stroke-width="1.5"/>
-          <rect x="194" y="119" width="12" height="12" fill="white" opacity=".75" transform="rotate(45,200,125)"/>
-          <rect x="259" y="184" width="12" height="12" fill="white" opacity=".75" transform="rotate(45,265,190)"/>
-          <rect x="194" y="249" width="12" height="12" fill="white" opacity=".85" transform="rotate(45,200,255)"/>
-          <rect x="129" y="184" width="12" height="12" fill="white" opacity=".75" transform="rotate(45,135,190)"/>
-          <circle cx="200" cy="202" r="8" fill="rgba(180,140,80,.28)" stroke="rgba(255,255,255,.13)" stroke-width="1"/>
+        <svg viewBox="58 28 294 272" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <radialGradient id="fg" cx="50%" cy="60%" r="65%">
+              <stop offset="0%" stop-color="#2d5a1b"/>
+              <stop offset="100%" stop-color="#1a3a10"/>
+            </radialGradient>
+          </defs>
+          <!-- 외야 잔디 타원 -->
+          <ellipse cx="200" cy="180" rx="140" ry="128" fill="url(#fg)" opacity=".6"/>
+          <!-- 파울라인: 홈→3루 베이스 통과 → 좌측 외야 끝 -->
+          <line x1="200" y1="270" x2="62" y2="132"
+            stroke="rgba(255,255,255,.55)" stroke-width="1.5"/>
+          <!-- 파울라인: 홈→1루 베이스 통과 → 우측 외야 끝 -->
+          <line x1="200" y1="270" x2="338" y2="132"
+            stroke="rgba(255,255,255,.55)" stroke-width="1.5"/>
+          <!-- 내야 다이아몬드: 2루(200,110) 1루(280,190) 홈(200,270) 3루(120,190) -->
+          <polygon points="200,110 280,190 200,270 120,190"
+            fill="rgba(180,140,80,.15)" stroke="rgba(255,255,255,.28)" stroke-width="1.8"/>
+          <!-- 베이스: 2루 -->
+          <rect x="193" y="103" width="14" height="14" fill="white" opacity=".85"
+            transform="rotate(45,200,110)"/>
+          <!-- 베이스: 1루 -->
+          <rect x="273" y="183" width="14" height="14" fill="white" opacity=".8"
+            transform="rotate(45,280,190)"/>
+          <!-- 베이스: 홈 (홈플레이트 오각형 근사) -->
+          <polygon points="200,263 207,270 200,277 193,270"
+            fill="white" opacity=".9"/>
+          <!-- 베이스: 3루 -->
+          <rect x="113" y="183" width="14" height="14" fill="white" opacity=".8"
+            transform="rotate(45,120,190)"/>
+          <!-- 투수 마운드 -->
+          <circle cx="200" cy="190" r="9" fill="rgba(180,140,80,.35)"
+            stroke="rgba(255,255,255,.2)" stroke-width="1.2"/>
           ${svgPlayers}
         </svg>
       </div>
